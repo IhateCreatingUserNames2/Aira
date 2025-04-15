@@ -6,6 +6,8 @@ AIRA (AI Resource and Agent Network) enables AI agents built with different fram
 ###
 DEMO AGENT 1 SERVING WEATHER TOOLS 
 ![image](https://github.com/user-attachments/assets/80960622-fab9-45fd-a32d-e75e48230393)
+![image](https://github.com/user-attachments/assets/808f317c-ce3b-47db-845a-ccd4b1172971)
+
 ###
 ###
 AIRA HUB 
@@ -13,4 +15,5 @@ AIRA HUB
 ###
 DEMO AGENT CLI CONSUMING DEMO AGENT WEATHER TOOLS THRU AIRA NETWORK
 ![image](https://github.com/user-attachments/assets/f372fe11-26f0-44a2-8483-da96749e42ed)
+![image](https://github.com/user-attachments/assets/9b4d7adf-0390-4c00-be9d-adf0cf95d166)
 
