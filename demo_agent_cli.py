@@ -1,8 +1,8 @@
 """
-AIRA Consumer Agent
--------------------
-This agent demonstrates how to discover and invoke tools from other agents (specifically
-the WeatherAgent) through the AIRA network.
+AIRA Consumer Agent (Improved)
+------------------------------
+This agent discovers and invokes tools from the WeatherAgent through the AIRA network,
+with improved handling of city names and error conditions.
 """
 
 import asyncio
@@ -11,7 +11,6 @@ import json
 import sys
 import datetime
 from typing import Dict, Any, Optional, List
-
 
 # --- AIRA Client ---
 class AiraNode:
@@ -202,8 +201,8 @@ class AiraNode:
 
 
 # --- Consumer Agent ---
-class ConsumerAgent:
-    """Agent that discovers and consumes tools from other agents."""
+class ImprovedConsumerAgent:
+    """Agent that discovers and consumes tools from other agents with improved handling."""
 
     def __init__(self, hub_url: str, agent_url: str, agent_name: str):
         """Initialize the Consumer Agent."""
@@ -214,6 +213,7 @@ class ConsumerAgent:
         )
         self.discovered_agents = {}
         self.discovered_tools = {}
+        self.available_cities = set()  # Track available cities
 
     async def start(self):
         """Start the agent and register with the AIRA hub."""
@@ -269,22 +269,66 @@ class ConsumerAgent:
         self.discovered_tools[agent_url] = tools
         return tools
 
+    async def discover_available_cities(self, agent_url: str):
+        """Use the weather tool to discover available cities."""
+        # Make a generic request to discover available cities
+        result = await self.invoke_weather_tool(agent_url, "test")
+
+        if result and "available_cities" in result:
+            self.available_cities = set(result["available_cities"])
+            print(f"📍 Available cities: {', '.join(self.available_cities)}")
+
+        return self.available_cities
+
+    def normalize_city_name(self, city: str) -> str:
+        """Find the best match for a city name in available cities."""
+        if not self.available_cities:
+            return city
+
+        # Normalize input
+        city_normalized = city.lower().strip()
+
+        # Exact match
+        if city_normalized in self.available_cities:
+            return city_normalized
+
+        # Try without spaces
+        city_nospace = city_normalized.replace(" ", "")
+        for available in self.available_cities:
+            if available.replace(" ", "") == city_nospace:
+                return available
+
+        # Check if city is a case-insensitive match
+        for available in self.available_cities:
+            if available.lower() == city_normalized:
+                return available
+
+        # No match found, return original
+        return city_normalized
+
     async def invoke_weather_tool(self, agent_url: str, city: str):
         """Invoke the weather tool on the weather agent."""
         # Find the weather tool
         tools = self.discovered_tools.get(agent_url, [])
-        weather_tool = next((t for t in tools if "weather" in t["name"].lower()), None)
+        weather_tool = next((t for t in tools if "weather" in t["name"].lower() and "forecast" not in t["name"].lower()), None)
 
         if not weather_tool:
             print(f"⚠️ No weather tool found for {agent_url}")
             return None
 
-        print(f"🌦️ Invoking weather tool for {city}")
+        # Normalize city name
+        normalized_city = self.normalize_city_name(city)
+        print(f"🌦️ Invoking weather tool for {city} (normalized to {normalized_city})")
+
         result = await self.aira_node.invoke_agent_tool(
             agent_url=agent_url,
             tool_name=weather_tool["name"],
-            params={"city": city}
+            params={"city": normalized_city}
         )
+
+        # Update available cities if provided
+        if result and "available_cities" in result:
+            self.available_cities = set(result["available_cities"])
 
         return result
 
@@ -298,12 +342,19 @@ class ConsumerAgent:
             print(f"⚠️ No forecast tool found for {agent_url}")
             return None
 
-        print(f"🔮 Invoking forecast tool for {city} ({days} days)")
+        # Normalize city name
+        normalized_city = self.normalize_city_name(city)
+        print(f"🔮 Invoking forecast tool for {city} (normalized to {normalized_city}) ({days} days)")
+
         result = await self.aira_node.invoke_agent_tool(
             agent_url=agent_url,
             tool_name=forecast_tool["name"],
-            params={"city": city, "days": days}
+            params={"city": normalized_city, "days": days}
         )
+
+        # Update available cities if provided
+        if result and "available_cities" in result:
+            self.available_cities = set(result["available_cities"])
 
         return result
 
@@ -332,7 +383,7 @@ async def interact_with_user(consumer_agent, weather_agent_url=None):
         else:
             print("Multiple weather agents found:")
             for i, (url, name) in enumerate(weather_agents):
-                print(f"{i + 1}. {name} ({url})")
+                print(f"{i+1}. {name} ({url})")
 
             choice = input("Select agent number: ")
             try:
@@ -350,24 +401,35 @@ async def interact_with_user(consumer_agent, weather_agent_url=None):
         print("❌ No tools found for this agent.")
         return
 
+    # Discover available cities
+    print("\n📍 Discovering available cities...")
+    cities = await consumer_agent.discover_available_cities(weather_agent_url)
+
     print("\n✅ Ready to use weather tools!")
 
     # Interactive loop
     while True:
-        print("\n--- AIRA Weather Consumer ---")
+        print("\n--- AIRA Weather Consumer (Improved) ---")
         print("1. Get current weather")
         print("2. Get weather forecast")
-        print("3. Exit")
+        print("3. List available cities")
+        print("4. Exit")
 
         choice = input("Choose an option: ")
 
         if choice == "1":
+            print(f"\nAvailable cities: {', '.join(consumer_agent.available_cities)}")
             city = input("Enter city name: ")
             print(f"\n🔄 Getting weather for {city}...")
             result = await consumer_agent.invoke_weather_tool(weather_agent_url, city)
-            print(f"\n🌦️ Weather Result:\n{json.dumps(result, indent=2)}")
+
+            if result and "error" in result:
+                print(f"\n⚠️ Error: {result['error']}")
+            else:
+                print(f"\n🌦️ Weather Result:\n{json.dumps(result, indent=2)}")
 
         elif choice == "2":
+            print(f"\nAvailable cities: {', '.join(consumer_agent.available_cities)}")
             city = input("Enter city name: ")
             days_input = input("Enter number of days (default 3): ")
             days = 3
@@ -379,9 +441,16 @@ async def interact_with_user(consumer_agent, weather_agent_url=None):
 
             print(f"\n🔄 Getting {days}-day forecast for {city}...")
             result = await consumer_agent.invoke_forecast_tool(weather_agent_url, city, days)
-            print(f"\n🔮 Forecast Result:\n{json.dumps(result, indent=2)}")
+
+            if result and "error" in result:
+                print(f"\n⚠️ Error: {result['error']}")
+            else:
+                print(f"\n🔮 Forecast Result:\n{json.dumps(result, indent=2)}")
 
         elif choice == "3":
+            print(f"\n📍 Available cities: {', '.join(consumer_agent.available_cities)}")
+
+        elif choice == "4":
             print("👋 Goodbye!")
             break
 
@@ -393,8 +462,8 @@ async def interact_with_user(consumer_agent, weather_agent_url=None):
 async def main():
     # Configuration
     HUB_URL = os.environ.get("AIRA_HUB_URL", "http://localhost:8000")
-    AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:8002")  # Different port than weather agent
-    AGENT_NAME = "WeatherConsumerAgent"
+    AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:8002") # Different port than weather agent
+    AGENT_NAME = "ImprovedWeatherConsumerAgent"
     WEATHER_AGENT_URL = os.environ.get("WEATHER_AGENT_URL", "http://localhost:8001")
 
     # Command line args
@@ -405,7 +474,7 @@ async def main():
             if len(sys.argv) > 2:
                 city = sys.argv[2]
             else:
-                city = "London"
+                city = "london"  # Note lowercase
         else:
             # Take first arg as WEATHER_AGENT_URL
             WEATHER_AGENT_URL = sys.argv[1]
@@ -415,7 +484,7 @@ async def main():
 
     # Create and start the agent
     try:
-        consumer_agent = ConsumerAgent(
+        consumer_agent = ImprovedConsumerAgent(
             hub_url=HUB_URL,
             agent_url=AGENT_URL,
             agent_name=AGENT_NAME
@@ -435,15 +504,25 @@ async def main():
                 print("❌ No tools found for weather agent.")
                 return
 
+            # Discover available cities first
+            print("\n📍 Discovering available cities...")
+            await consumer_agent.discover_available_cities(WEATHER_AGENT_URL)
+
             # Get current weather
             print(f"\n🔄 Getting weather for {city}...")
             weather = await consumer_agent.invoke_weather_tool(WEATHER_AGENT_URL, city)
-            print(f"\n🌦️ Weather Result:\n{json.dumps(weather, indent=2)}")
+            if weather and "error" in weather:
+                print(f"\n⚠️ Error: {weather['error']}")
+            else:
+                print(f"\n🌦️ Weather Result:\n{json.dumps(weather, indent=2)}")
 
             # Get forecast
             print(f"\n🔄 Getting 5-day forecast for {city}...")
             forecast = await consumer_agent.invoke_forecast_tool(WEATHER_AGENT_URL, city, 5)
-            print(f"\n🔮 Forecast Result:\n{json.dumps(forecast, indent=2)}")
+            if forecast and "error" in forecast:
+                print(f"\n⚠️ Error: {forecast['error']}")
+            else:
+                print(f"\n🔮 Forecast Result:\n{json.dumps(forecast, indent=2)}")
 
         else:
             # Interactive mode
