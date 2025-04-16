@@ -6,7 +6,7 @@ AIRA (Agent Interoperability and Resource Access) enables AI agents built with d
   -  Build Agent to Host/Invoke Tools from the AiraHub. 
      -  Check demo basic_aira_agent.py , demo_agent1.py(Host tools)
      -  Check Cognisphere_adk for another Example of Hosting/Invoking tools thru the AiraHub. 
-     -  Use basic_aira_Invoker.py as base Invoker of Tools
+     -  Use basic_aira_Invoker.py as an example of Invoker of Tools
 
 Aira Demo Hub WebUi Running On: https://airahubweb.onrender.com/
 
