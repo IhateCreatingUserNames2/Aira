@@ -1,9 +1,16 @@
 ####    AIRA - Agent Interoperability and Resource Access Network
 
+# USAGE: 
+  -  Host your own Hub: Download AiraHUB.py , Install Requirements, Run AiraHub.py . Config Url/Port. 
+  -  Build Agent to Host/Invoke Tools from the AiraHub. Check basic_aira_agent.py , demo_agent1.py(Host tools), demo_agent_cli.py(Invoke tools personalized). Check Cognisphere_adk for another Example of Hosting/Invoking tools thru the AiraHub. 
+  -  
+
+
 Aira Demo Hub Running on: https://aira-fl8f.onrender.com/
 
 ![image](https://github.com/user-attachments/assets/6ac008af-539a-477e-a7b0-49ab2d47752b)
- 
+ ![image](https://github.com/user-attachments/assets/1161ada4-2aff-4971-91af-cdecfab94976)
+
 List of Agents (Only demo agents localhost) 
 https://aira-fl8f.onrender.com/agents 
 #
