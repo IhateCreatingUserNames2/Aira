@@ -2,8 +2,10 @@
 
 # USAGE: 
   -  Host your own Hub: Download AiraHUB.py , Install Requirements, Run AiraHub.py . Config Url/Port. 
-  -  Build Agent to Host/Invoke Tools from the AiraHub. Check basic_aira_agent.py , demo_agent1.py(Host tools), demo_agent_cli.py(Invoke tools personalized). Check Cognisphere_adk for another Example of Hosting/Invoking tools thru the AiraHub. 
-  -  
+  -  Build Agent to Host/Invoke Tools from the AiraHub. 
+     -  Check demo basic_aira_agent.py , demo_agent1.py(Host tools), demo_agent_cli.py(Invoke tools personalized).
+     -  Check Cognisphere_adk for another Example of Hosting/Invoking tools thru the AiraHub. 
+    
 
 
 Aira Demo Hub Running on: https://aira-fl8f.onrender.com/
