@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 import json
+import os
 
 
 class SimpleA2AAgent:
@@ -8,8 +9,18 @@ class SimpleA2AAgent:
         self.hub_url = hub_url
         self.agent_url = agent_url
         self.agent_name = agent_name
-        self.session = aiohttp.ClientSession()
+        self.session = None
         self.tools = {}
+
+    async def __aenter__(self):
+        """Async context manager entry point"""
+        self.session = aiohttp.ClientSession()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit point - properly close session"""
+        if self.session:
+            await self.session.close()
 
     def add_tool(self, name, function):
         """Add a tool that can be invoked by other agents"""
@@ -17,6 +28,9 @@ class SimpleA2AAgent:
 
     async def register_with_hub(self):
         """Register the agent with the AIRA Hub"""
+        if not self.session:
+            raise RuntimeError("Client session not initialized. Use async context manager.")
+
         payload = {
             "url": self.agent_url,
             "name": self.agent_name,
@@ -34,8 +48,12 @@ class SimpleA2AAgent:
         async with self.session.post(f"{self.hub_url}/register", json=payload) as resp:
             if resp.status == 201:
                 print(f"✅ Registered {self.agent_name} with hub")
+                result = await resp.json()
+                return result
             else:
-                print(f"❌ Registration failed: {await resp.text()}")
+                error_text = await resp.text()
+                print(f"❌ Registration failed: {error_text}")
+                return None
 
     async def handle_a2a_request(self, request):
         """Handle incoming A2A protocol requests"""
@@ -95,21 +113,29 @@ class SimpleA2AAgent:
 
 
 async def main():
-    # Example usage
-    hub_url = "https://aira-fl8f.onrender.com"
-    agent_url = "http://localhost:8088"
+    # Configuration from environment or defaults
+    hub_url = os.environ.get("AIRA_HUB_URL", "https://aira-fl8f.onrender.com")
+    agent_url = os.environ.get("AGENT_URL", "http://localhost:8088")
 
-    agent = SimpleA2AAgent(hub_url, agent_url, "EchoAgent")
+    # Use async context manager to ensure proper session handling
+    async with SimpleA2AAgent(hub_url, agent_url, "EchoAgent") as agent:
+        # Add a simple tool
+        def echo_tool(params):
+            return {"echo": params.get("text", "")}
 
-    # Add a simple tool
-    def echo_tool(params):
-        return {"echo": params.get("text", "")}
+        agent.add_tool("echo", echo_tool)
 
-    agent.add_tool("echo", echo_tool)
+        # Register with hub
+        await agent.register_with_hub()
 
-    # Register with hub
-    await agent.register_with_hub()
+        # Keep the script running (in a real implementation,
+        # you'd set up a web server or long-running process)
+        print("Agent running. Press Ctrl+C to exit.")
+        await asyncio.get_event_loop().create_future()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n👋 Agent stopped.")
