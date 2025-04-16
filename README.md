@@ -17,3 +17,9 @@ DEMO AGENT CLI CONSUMING DEMO AGENT WEATHER TOOLS THRU AIRA NETWORK
 ![image](https://github.com/user-attachments/assets/f372fe11-26f0-44a2-8483-da96749e42ed)
 ![image](https://github.com/user-attachments/assets/9b4d7adf-0390-4c00-be9d-adf0cf95d166)
 
+
+
+###
+
+
+![image](https://github.com/user-attachments/assets/9086584f-fcf2-4478-b2c9-8df2b5965ce8)
