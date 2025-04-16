@@ -626,6 +626,7 @@ async def heartbeat(
 
     return {"status": "ok"}
 
+
 @app.get("/agents", tags=["Discovery"])
 async def list_agents(request: Request):
     """
@@ -635,12 +636,16 @@ async def list_agents(request: Request):
     """
     agents = await request.app.state.storage.list_agents()
 
-    # Filter out sensitive information
+    # Convert Pydantic models to dictionaries
+    agent_list = []
     for agent in agents:
-        if "credentials" in agent.auth:
-            del agent.auth["credentials"]
+        agent_dict = agent.dict()
+        # Filter out sensitive information
+        if "credentials" in agent_dict.get("auth", {}):
+            del agent_dict["auth"]["credentials"]
+        agent_list.append(agent_dict)
 
-    return agents
+    return JSONResponse(content=agent_list)
 
 
 @app.post("/discover", tags=["Discovery"])
