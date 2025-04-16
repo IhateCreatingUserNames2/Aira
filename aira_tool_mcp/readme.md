@@ -1,4 +1,6 @@
-How to Use These Tools
+CHANGE HUB URL: --hub", default="https://aira-fl8f.onrender.com", help="AIRA Hub URL"
+
+How to Use These Tools 
 1. Register a Remote MCP Server
 Using the command-line tool:
 bash# Register an MCP server with AIRA Hub
