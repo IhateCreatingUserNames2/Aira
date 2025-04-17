@@ -8,7 +8,9 @@ This implementation provides:
 - Health monitoring
 - Metrics and analytics
 """
-
+from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
+from typing import AsyncGenerator
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -898,6 +900,31 @@ def run(host: str = "0.0.0.0", port: int = 8000, reload: bool = False):
         reload=reload,
         log_config=log_config
     )
+
+@app.get("/events/stream", tags=["SSE"])
+async def event_stream(agent_url: str, request: Request):
+    """
+    Server-Sent Events (SSE) endpoint for live agent streaming.
+    This can be used by AIRA clients to receive updates from the hub or specific agents.
+    """
+    agent = await request.app.state.storage.get_agent(agent_url)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        while True:
+            if await request.is_disconnected():
+                break
+            agent = await request.app.state.storage.get_agent(agent_url)
+            payload = json.dumps({
+                "agent": agent.name,
+                "status": agent.status,
+                "timestamp": time.time()
+            })
+            yield f"data: {payload}\n\n"
+            await asyncio.sleep(5)  # Send updates every 5 seconds
+
+    return EventSourceResponse(event_generator())
 
 @app.get("/docs/openapi.json", include_in_schema=False)
 async def get_openapi_schema():
