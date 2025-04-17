@@ -1,4 +1,7 @@
 ####    AIRA - Agent Interoperability and Resource Access Network
+
+   ---- ADDED SSE 
+
 #####  Bridging A2A and MCP for Seamless AI Agent Collaboration
 AIRA (Agent Interoperability and Resource Access) enables AI agents built with different frameworks to discover and communicate with each other using a standardized protocol. It bridges the gap between the Agent-to-Agent (A2A) protocol and the Model Context Protocol (MCP) to create a unified ecosystem where AI tools and resources can be shared across different agent implementations.
 # USAGE: 
@@ -39,6 +42,7 @@ DEMO AGENT CLI CONSUMING DEMO AGENT WEATHER TOOLS THRU AIRA NETWORK
 
 
 ###
+![image](https://github.com/user-attachments/assets/b8f30c7c-2fc3-44a3-ba4f-77b2292901f1)
 
 
 ![image](https://github.com/user-attachments/assets/9086584f-fcf2-4478-b2c9-8df2b5965ce8)
