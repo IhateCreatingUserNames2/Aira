@@ -1,135 +1,131 @@
+# 🌐 AuraHub (AIRA Hub)
 
-# 🤖 AIRA Hub – Agent Interoperability & Resource Access
+AuraHub is the central node of the AIRA Network — a decentralized discovery and interaction system for AI agents. It enables agents with different architectures to register, discover each other, and share tools or skills in real-time.
 
-**AIRA Hub** is a decentralized interoperability layer that connects AI agents built with different protocols (A2A and MCP). It serves as a registry, discovery service, and live heartbeat monitor for agents, tools, and skills across a distributed AI network.
+## 🌟 Key Features
 
----
+- 🧠 Supports both MCP (Model Context Protocol) and A2A (Agent-to-Agent) architectures
+- 🔍 Unified discovery interface for different agent types
+- 🔧 Tool and skill registration capabilities
+- 🌐 Automatic agent registration via SSE stream
+- 🔁 Real-time heartbeat tracking
+- 📦 Flexible storage backend (in-memory or file-based)
 
-## 🌐 Overview
+## ⚙️ Supported Capabilities
 
-AIRA enables hybrid AI ecosystems, allowing agents with different capabilities to **discover each other**, **share tools or skills**, and **remain synchronized** via live SSE (Server-Sent Events) updates.
+- Unified discovery of agents
+- Filtering agents by:
+  - Capability
+  - Tags
+  - Category
+  - Status
+- Registration of:
+  - MCP Tools (`mcp_tool`)
+  - A2A Skills (`a2a_skill`)
 
-Supported agent types:
-- **MCP Agents** – offer tools/resources using the Model Context Protocol
-- **A2A Agents** – offer high-level skills for direct use by other agents
-- **Hybrid Agents** – expose both tools and skills
+## 🚀 Quick Start
 
----
-
-## 🚀 Getting Started
-
-### 1. **Run AIRA Hub**
-
-Run the AIRA Hub server:
+### Running AuraHub
 
 ```bash
 python AiraHub.py --port 8015
-The default database is aira_db.json. Agents register here to announce their skills/tools and sync heartbeat status.
+```
 
-2. Connect an Agent via SSE
-Use the provided client: aira_sse_client.py
+Default configurations:
+- Port: 8015
+- Database file: `aira_db.json` (auto-created)
 
-This script:
+### Agent Registration
 
-Registers the agent with live heartbeat (/connect/stream)
+#### SSE Live Connection (Preferred Method)
+Use `aira_sse_client.py` to connect:
 
-Initializes its metadata (/connect/stream/init)
+```bash
+GET /connect/stream?agent_url=...&name=...&aira_capabilities=mcp,a2a
+```
 
-Keeps connection alive and updates last-seen timestamps
+#### Manual Registration
+Send a POST request to `/register`:
 
-bash
-Copy
-Edit
-python aira_sse_client.py
-✅ Example registration includes:
-
-An A2A skill: semantic-recall
-
-An MCP tool: recall
-
-🧠 How AIRA Hub Organizes Agents
-
-Route Prefix	Client View	Filter Logic
-/mcp/agents	MCP-only view	Only shows agents with "mcp"
-/a2a/agents	A2A-only view	Only shows agents with "a2a"
-/hybrid/agents	Full ecosystem view	Includes agents with any capability
-/events/stream	SSE agent heartbeat	Streams status for individual agent
-🛠 How to Discover and Use Tools & Skills
-You can use the script aira_tool_user.py to:
-
-🔍 Discover agents on the network
-
-📡 Call MCP Tools via HTTP POST
-
-🎯 Use A2A Skills (metadata only, execution is up to implementation)
-
-Example Usage:
-bash
-Copy
-Edit
-python aira_tool_user.py
-Sample output:
-
-yaml
-Copy
-Edit
-🤖 MCP Agent: MemoryAgent
-🚀 Calling tool: http://localhost:8094/tools/recall
-✅ Tool response: {"result": "Memory retrieved."}
-
----
-
-🤖 A2A Agent: MemoryAgent
-🎯 Using skill: Semantic Recall from agent MemoryAgent
-🧠 Skill Description: Retrieves and reformulates memory based on latent intent
-🧬 Agent Registration Schema
-Agents register with:
-
-json
-Copy
-Edit
+```json
 {
   "url": "http://localhost:8094/",
   "name": "MemoryAgent",
   "aira_capabilities": ["mcp", "a2a"],
   "skills": [...],
   "shared_resources": [...],
-  "tags": ["memory", "cognition"],
-  "status": "online"
+  "tags": ["streamed", "cognition"]
 }
-💓 SSE Heartbeat Monitoring
-Agents connected via /connect/stream are auto-tracked and updated every 5s.
+```
 
-You can view system status via:
+## 📡 Agent Discovery
 
-http
-Copy
-Edit
-GET /status
-Response includes uptime, active agents, and heartbeat lag.
+Discovery Endpoints:
+- `/mcp/agents`: MCP agents only
+- `/a2a/agents`: A2A agents only
+- `/hybrid/agents`: All agents (default)
 
-📦 File Structure
+Filtering options available via `/discover` endpoint:
+- `skill_id`
+- `skill_tags`
+- `resource_type`
+- `category`
+- `status`
 
-File	Purpose
-AiraHub.py	Main FastAPI Hub for agent registration/discovery
-aira_sse_client.py	SSE-enabled agent that connects to AIRA and syncs
-aira_tool_user.py	CLI client to discover and invoke tools/skills
-📌 Notes
-Hybrid clients like Cognisphere should register with both "mcp" and "a2a" capabilities.
+## 🛠 Tool and Skill Usage
 
-Agent status is auto-updated based on heartbeat TTL (default: 5 minutes).
+Use `aira_tool_user.py` to:
+- Discover agents and their capabilities
+- Call MCP Tools directly
+- Inspect available A2A Skills
 
-You can extend the system with more endpoints like /mcp/tools, /a2a/skills, or /invoke.
+## 🧠 Status Monitoring
 
-🧭 Final Words
-AIRA is designed to make cross-framework AI collaboration simple, extensible, and real-time. Whether you’re building a tool-focused MCP service or a skill-based multi-agent AI, AIRA lets you plug into the same shared network with zero friction.
+Check system status via `/status` endpoint:
+- Uptime
+- Active vs. registered agents
+- Last heartbeat
+- Agent capabilities
 
-Happy connecting! ✨
+## 🪐 Design Philosophy
 
-yaml
-Copy
-Edit
+AuraHub respects agent diversity:
+- MCP Clients see only MCP Agents
+- A2A Clients see only A2A Agents
+- Hybrid Clients see all Agents
 
----
+## 📂 Key Files
 
-Let me know if you want a version in português ou um diagrama da arquitetura!
+| File | Description |
+|------|-------------|
+| `AiraHub.py` | Main FastAPI app for AIRA hub |
+| `aira_sse_client.py` | Example SSE-connected agent |
+| `aira_tool_user.py` | Discovery and test client |
+
+## 🔗 Architecture Overview
+
+```
+           +------------------------+
+           |     AuraHub (API)     |
+           |  FastAPI + SSE Layer  |
+           +----------+-----------+
+                      |
+          +-----------+-----------+
+          | Agent Registration    |
+          | via REST or SSE       |
+          +-----------------------+
+          | Agent Discovery APIs  |
+          | by capability/type    |
+          +-----------------------+
+          | Status & Heartbeat    |
+          | Monitoring            |
+          +-----------------------+
+```
+
+## 🚧 Contribution
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+[Insert License Information Here]
