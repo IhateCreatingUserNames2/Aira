@@ -1,58 +1,43 @@
-# Core Python Libraries
-asyncio
-typing
-uuid
-enum
-
-# Web Framework
-fastapi
-uvicorn
-sse-starlette
+# Core Web Framework
+fastapi==0.109.2
+uvicorn==0.27.1
+sse-starlette==1.8.2
 
 # Authentication and Security
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
-python-jose
-secrets  # Built-in, but good to list for clarity
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+passlib[bcrypt]==1.7.4
+PyJWT==2.8.0
 
 # HTTP Clients
-httpx
-requests
-
-# Templating
-jinja2
+httpx==0.27.0
+requests==2.31.0
 
 # Data Validation
-pydantic>=2.0.0
-email-validator
+pydantic==2.6.4
+email-validator==2.1.1
 
-# OAuth and Token Management
-python-jose
-PyJWT
+# Templating
+jinja2==3.1.3
+
+# Async Support
+anyio==4.3.0
+
+# CORS and Web Middleware
+starlette==0.36.3
+
+# Type Handling
+typing-extensions==4.10.0
+
+# Date and Time
+python-dateutil==2.9.0.post0
+
+# URL Handling
+urllib3==2.2.1
 
 # Additional Utilities
-python-dotenv
+aiohttp==3.9.3
 
-# CORS Support
-starlette
-
-# Type Checking
-typing-extensions
-
-# Logging
-logging
-
-# Date and Time Handling
-datetime
-
-# URL Handling and Parsing
-urllib3
-
-# Optional but Recommended
-aiohttp  # Alternative async HTTP library
-anyio    # Async support library
-
-# Development and Debugging
-pytest  # For testing
-httpx   # For async HTTP testing
+# Optional but Recommended for Development
+pytest==8.1.1
