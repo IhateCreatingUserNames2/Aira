@@ -1,4 +1,4 @@
-# AuraHub.py – “vibe” edition
+# AuraHub.py – 
 # ---------------------------------------------------------------------------
 # – Keeps MCP‑only and A2A‑only worlds cleanly separated
 # – Adds dedicated routes:
