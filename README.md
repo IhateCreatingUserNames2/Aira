@@ -1,50 +1,135 @@
-####    AIRA - Agent Interoperability and Resource Access Network
 
-   ---- ADDED SSE 
+# 🤖 AIRA Hub – Agent Interoperability & Resource Access
 
-#####  Bridging A2A and MCP for Seamless AI Agent Collaboration
-AIRA (Agent Interoperability and Resource Access) enables AI agents built with different frameworks to discover and communicate with each other using a standardized protocol. It bridges the gap between the Agent-to-Agent (A2A) protocol and the Model Context Protocol (MCP) to create a unified ecosystem where AI tools and resources can be shared across different agent implementations.
-# USAGE: 
-  -  Host your own Hub: Download AiraHUB.py , Install Requirements, Run AiraHub.py . Config Url/Port. 
-  -  Build Agent to Host/Invoke Tools from the AiraHub. 
-     -  Check demo basic_aira_agent.py , demo_agent1.py(Host tools)
-     -  Check Cognisphere_adk for another Example of Hosting/Invoking tools thru the AiraHub. 
-     -  Use basic_aira_Invoker.py as an example of Invoker of Tools
+**AIRA Hub** is a decentralized interoperability layer that connects AI agents built with different protocols (A2A and MCP). It serves as a registry, discovery service, and live heartbeat monitor for agents, tools, and skills across a distributed AI network.
 
-Aira Demo Hub WebUi Running On: https://airahubweb.onrender.com/
+---
 
-Aira Demo Hub Running on: https://aira-fl8f.onrender.com/
-![image](https://github.com/user-attachments/assets/537bf4ea-acbe-4642-a048-03c1afa1ea90)
+## 🌐 Overview
 
-![image](https://github.com/user-attachments/assets/6ac008af-539a-477e-a7b0-49ab2d47752b)
- ![image](https://github.com/user-attachments/assets/1161ada4-2aff-4971-91af-cdecfab94976)
+AIRA enables hybrid AI ecosystems, allowing agents with different capabilities to **discover each other**, **share tools or skills**, and **remain synchronized** via live SSE (Server-Sent Events) updates.
 
-List of Agents (Only demo agents localhost) 
-https://aira-fl8f.onrender.com/agents 
-#
+Supported agent types:
+- **MCP Agents** – offer tools/resources using the Model Context Protocol
+- **A2A Agents** – offer high-level skills for direct use by other agents
+- **Hybrid Agents** – expose both tools and skills
 
-##
-![image](https://github.com/user-attachments/assets/63cb4a3f-1e32-49a7-b460-758b63216533)
-###
-DEMO AGENT 1 SERVING WEATHER TOOLS 
-![image](https://github.com/user-attachments/assets/80960622-fab9-45fd-a32d-e75e48230393)
-![image](https://github.com/user-attachments/assets/808f317c-ce3b-47db-845a-ccd4b1172971)
+---
 
-###
-###
-AIRA HUB 
-![image](https://github.com/user-attachments/assets/2d527e4f-a379-46ef-9a28-7d3e46cd4c95)
-###
-DEMO AGENT CLI CONSUMING DEMO AGENT WEATHER TOOLS THRU AIRA NETWORK
-![image](https://github.com/user-attachments/assets/f372fe11-26f0-44a2-8483-da96749e42ed)
-![image](https://github.com/user-attachments/assets/9b4d7adf-0390-4c00-be9d-adf0cf95d166)
+## 🚀 Getting Started
 
+### 1. **Run AIRA Hub**
 
+Run the AIRA Hub server:
 
-###
-![image](https://github.com/user-attachments/assets/b8f30c7c-2fc3-44a3-ba4f-77b2292901f1)
+```bash
+python AiraHub.py --port 8015
+The default database is aira_db.json. Agents register here to announce their skills/tools and sync heartbeat status.
 
+2. Connect an Agent via SSE
+Use the provided client: aira_sse_client.py
 
-![image](https://github.com/user-attachments/assets/9086584f-fcf2-4478-b2c9-8df2b5965ce8)
-![image](https://github.com/user-attachments/assets/8e4020ae-232c-41b9-92c4-7ec0b1a0c15e)
+This script:
 
+Registers the agent with live heartbeat (/connect/stream)
+
+Initializes its metadata (/connect/stream/init)
+
+Keeps connection alive and updates last-seen timestamps
+
+bash
+Copy
+Edit
+python aira_sse_client.py
+✅ Example registration includes:
+
+An A2A skill: semantic-recall
+
+An MCP tool: recall
+
+🧠 How AIRA Hub Organizes Agents
+
+Route Prefix	Client View	Filter Logic
+/mcp/agents	MCP-only view	Only shows agents with "mcp"
+/a2a/agents	A2A-only view	Only shows agents with "a2a"
+/hybrid/agents	Full ecosystem view	Includes agents with any capability
+/events/stream	SSE agent heartbeat	Streams status for individual agent
+🛠 How to Discover and Use Tools & Skills
+You can use the script aira_tool_user.py to:
+
+🔍 Discover agents on the network
+
+📡 Call MCP Tools via HTTP POST
+
+🎯 Use A2A Skills (metadata only, execution is up to implementation)
+
+Example Usage:
+bash
+Copy
+Edit
+python aira_tool_user.py
+Sample output:
+
+yaml
+Copy
+Edit
+🤖 MCP Agent: MemoryAgent
+🚀 Calling tool: http://localhost:8094/tools/recall
+✅ Tool response: {"result": "Memory retrieved."}
+
+---
+
+🤖 A2A Agent: MemoryAgent
+🎯 Using skill: Semantic Recall from agent MemoryAgent
+🧠 Skill Description: Retrieves and reformulates memory based on latent intent
+🧬 Agent Registration Schema
+Agents register with:
+
+json
+Copy
+Edit
+{
+  "url": "http://localhost:8094/",
+  "name": "MemoryAgent",
+  "aira_capabilities": ["mcp", "a2a"],
+  "skills": [...],
+  "shared_resources": [...],
+  "tags": ["memory", "cognition"],
+  "status": "online"
+}
+💓 SSE Heartbeat Monitoring
+Agents connected via /connect/stream are auto-tracked and updated every 5s.
+
+You can view system status via:
+
+http
+Copy
+Edit
+GET /status
+Response includes uptime, active agents, and heartbeat lag.
+
+📦 File Structure
+
+File	Purpose
+AiraHub.py	Main FastAPI Hub for agent registration/discovery
+aira_sse_client.py	SSE-enabled agent that connects to AIRA and syncs
+aira_tool_user.py	CLI client to discover and invoke tools/skills
+📌 Notes
+Hybrid clients like Cognisphere should register with both "mcp" and "a2a" capabilities.
+
+Agent status is auto-updated based on heartbeat TTL (default: 5 minutes).
+
+You can extend the system with more endpoints like /mcp/tools, /a2a/skills, or /invoke.
+
+🧭 Final Words
+AIRA is designed to make cross-framework AI collaboration simple, extensible, and real-time. Whether you’re building a tool-focused MCP service or a skill-based multi-agent AI, AIRA lets you plug into the same shared network with zero friction.
+
+Happy connecting! ✨
+
+yaml
+Copy
+Edit
+
+---
+
+Let me know if you want a version in português ou um diagrama da arquitetura!
