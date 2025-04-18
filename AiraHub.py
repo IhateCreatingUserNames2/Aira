@@ -1,4 +1,4 @@
-# AiraHub.py – 
+# AiraHubBKP.py –
 # ---------------------------------------------------------------------------
 # – Keeps MCP‑only and A2A‑only worlds cleanly separated
 # – Adds dedicated routes:
@@ -393,17 +393,14 @@ async def stream_init(request: Request):
 
     updated_fields = ["skills", "shared_resources", "tags", "category", "description"]
 
+    agent_dict = agent.dict()
     for field in updated_fields:
-        if field not in body:
-            continue
-        value = body[field]
-        # Validate types for list fields
-        if field in ["skills", "shared_resources", "tags"] and not isinstance(value, list):
-            log.warning(f"Invalid type for {field}. Must be a list.")
-            continue
-        setattr(agent, field, value)
+        if field in body and isinstance(body[field], (list, str, dict)):
+            agent_dict[field] = body[field]
 
+    agent = AgentRegistration(**agent_dict)
     await request.app.state.store.save_agent(agent)
+
     log.info(" Updated fields for %s: %s", agent_url, list(body.keys()))
     return {"status": "updated"}
 
