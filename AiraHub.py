@@ -1,4 +1,4 @@
-# AiraHub.py – “vibe” edition
+# AiraHub.py – 
 # ---------------------------------------------------------------------------
 # – Keeps MCP‑only and A2A‑only worlds cleanly separated
 # – Adds dedicated routes:
@@ -10,7 +10,7 @@
 #       • Fallback query param  ?client_type=mcp|a2a|hybrid
 #       • Ultimate default = hybrid
 #
-# Cognisphere?  Register it with both capabilities ["mcp","a2a"] and it will
+# Cognisphere  Register it with both capabilities ["mcp","a2a"] and it will
 # naturally show up in hybrid views only.  If you’d rather treat it as pure
 # MCP, list just ["mcp"].
 # ---------------------------------------------------------------------------
