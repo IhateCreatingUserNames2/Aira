@@ -1,6 +1,6 @@
-# 🌐 AuraHub (AIRA Hub)
+# 🌐 AiraHub (AIRA Hub)
 
-AuraHub is the central node of the AIRA Network — a decentralized discovery and interaction system for AI agents. It enables agents with different architectures to register, discover each other, and share tools or skills in real-time.
+AiraHub is the central node of the AIRA Network — a decentralized discovery and interaction system for AI agents. It enables agents with different architectures to register, discover each other, and share tools or skills in real-time.
 
 ## 🌟 Key Features
 
@@ -25,7 +25,7 @@ AuraHub is the central node of the AIRA Network — a decentralized discovery an
 
 ## 🚀 Quick Start
 
-### Running AuraHub
+### Running AiraHub
 
 ```bash
 python AiraHub.py --port 8015
@@ -89,7 +89,7 @@ Check system status via `/status` endpoint:
 
 ## 🪐 Design Philosophy
 
-AuraHub respects agent diversity:
+AiraHub respects agent diversity:
 - MCP Clients see only MCP Agents
 - A2A Clients see only A2A Agents
 - Hybrid Clients see all Agents
@@ -106,7 +106,7 @@ AuraHub respects agent diversity:
 
 ```
            +------------------------+
-           |     AuraHub (API)     |
+           |     AiraHub (API)     |
            |  FastAPI + SSE Layer  |
            +----------+-----------+
                       |
