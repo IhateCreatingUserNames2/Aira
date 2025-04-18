@@ -449,7 +449,7 @@ if __name__ == "__main__":
     import argparse, uvicorn
 
     p = argparse.ArgumentParser()
-    p.add_argument("--host", default="localhost")
+    p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8015)
     p.add_argument("--reload", action="store_true")
     cfg = p.parse_args()
