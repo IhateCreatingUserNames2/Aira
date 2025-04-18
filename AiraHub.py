@@ -254,7 +254,7 @@ def _strip_auth(a: AgentRegistration) -> dict:
 # generic discovery endpoints generator
 # ---------------------------------------------------------------------------
 def register_views(prefix: str, ctype: str):
-    tag = f"{ctype.upper()} Discovery"
+    tag = f"{ctype.upper()} Discovery"
 
     @app.get(f"{prefix}/agents", tags=[tag])
     async def list_agents(req: Request):
