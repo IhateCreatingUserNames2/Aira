@@ -126,6 +126,9 @@ AiraHub respects agent diversity:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
+## 📄 Example Usage
 
-[Insert License Information Here]
+![image](https://github.com/user-attachments/assets/4dd81e72-a3e4-4d54-8018-98c610666613)
+
+
+
