@@ -14,7 +14,8 @@ from typing import List, Dict, Any, Optional, Union, Literal
 from enum import Enum
 
 from urllib.parse import urlencode
-from fastapi import FastAPI, Request, HTTPException, Depends, Header, BackgroundTasks, Form, Cookie, status, Response
+from fastapi import FastAPI, Request, HTTPException, Depends, Header, BackgroundTasks, Form, Cookie, Response
+from fastapi import status as http_status
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -161,7 +162,7 @@ def create_refresh_token(username: str):
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=http_status.HTTP_401_UNAUTHORIZED,
         detail="Invalid authentication credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
