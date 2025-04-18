@@ -355,6 +355,13 @@ class AgentStore:
         self._oauth_clients: Dict[str, OAuthClient] = {}  # OAuth clients
 
     async def save_agent(self, agent: AgentRegistration):
+        existing = self._agents.get(agent.url)
+        if existing:
+            # keep any fields the incoming record forgot to send
+            if not agent.mcp_tools and existing.mcp_tools:
+                agent.mcp_tools = existing.mcp_tools
+            if not agent.a2a_skills and existing.a2a_skills:
+                agent.a2a_skills = existing.a2a_skills
         self._agents[agent.url] = agent
 
     async def update_agent_status(self, url: str, status: AgentStatus):
@@ -792,9 +799,7 @@ async def connect_stream(
 
             # Heartbeat loop
             while True:
-                ag.last_seen = datetime.utcnow().timestamp()
-                await app.state.store.save_agent(ag)
-
+                await app.state.store.update_agent_status(agent_url, AgentStatus.ONLINE)
                 yield json.dumps({
                     "event": "heartbeat",
                     "data": {
