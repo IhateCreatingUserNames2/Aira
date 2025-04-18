@@ -354,4 +354,6 @@ python AiraHub.py --host 0.0.0.0 --port 8015 --log-level debug
 
 ---
 
-For additional support or to report issues, please contact the AIRA Hub administrator.
+Example use
+
+![image](https://github.com/user-attachments/assets/bf47dfc5-272d-47e8-9e57-8f849f0e3ee9)
