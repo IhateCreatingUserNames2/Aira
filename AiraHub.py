@@ -1,4 +1,4 @@
-# AuraHub.py – “vibe” edition
+# AiraHub.py – “vibe” edition
 # ---------------------------------------------------------------------------
 # – Keeps MCP‑only and A2A‑only worlds cleanly separated
 # – Adds dedicated routes:
@@ -44,7 +44,7 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)s  %(message)s",
     handlers=[logging.StreamHandler(), logging.FileHandler("aira_hub.log")],
 )
-log = logging.getLogger("AuraHub")
+log = logging.getLogger("AiraHub")
 
 # ---------------------------------------------------------------------------
 # enums / models
@@ -454,4 +454,4 @@ if __name__ == "__main__":
     p.add_argument("--reload", action="store_true")
     cfg = p.parse_args()
 
-    uvicorn.run("AuraHub:app", host=cfg.host, port=cfg.port, reload=cfg.reload)
+    uvicorn.run("AiraHub:app", host=cfg.host, port=cfg.port, reload=cfg.reload)
