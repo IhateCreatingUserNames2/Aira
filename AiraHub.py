@@ -9,6 +9,7 @@ import httpx
 import time
 import secrets
 import jwt
+import traceback
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Union, Literal
 from enum import Enum
@@ -355,14 +356,33 @@ class AgentStore:
         self._oauth_clients: Dict[str, OAuthClient] = {}  # OAuth clients
 
     async def save_agent(self, agent: AgentRegistration):
+        # FIX: Improved merging logic for existing agent data
         existing = self._agents.get(agent.url)
         if existing:
-            # keep any fields the incoming record forgot to send
-            if not agent.mcp_tools and existing.mcp_tools:
-                agent.mcp_tools = existing.mcp_tools
-            if not agent.a2a_skills and existing.a2a_skills:
-                agent.a2a_skills = existing.a2a_skills
-        self._agents[agent.url] = agent
+            # Properly merge the agent data with existing data
+            agent_dict = agent.model_dump()
+            existing_dict = existing.model_dump()
+
+            # Check mcp_tools and preserve existing if none provided in new agent
+            if not agent_dict.get('mcp_tools') and existing_dict.get('mcp_tools'):
+                agent_dict['mcp_tools'] = existing_dict['mcp_tools']
+
+            # Check a2a_skills and preserve existing if none provided in new agent
+            if not agent_dict.get('a2a_skills') and existing_dict.get('a2a_skills'):
+                agent_dict['a2a_skills'] = existing_dict['a2a_skills']
+
+            # For debugging
+            logger.info(
+                f"Saving agent {agent.url}: mcp_tools: {len(agent_dict['mcp_tools'])}, a2a_skills: {len(agent_dict['a2a_skills'])}")
+
+            # Create a new agent with the merged data
+            updated_agent = AgentRegistration(**agent_dict)
+            self._agents[agent.url] = updated_agent
+        else:
+            # New agent, just save it directly
+            logger.info(
+                f"Creating new agent {agent.url}: mcp_tools: {len(agent.mcp_tools)}, a2a_skills: {len(agent.a2a_skills)}")
+            self._agents[agent.url] = agent
 
     async def update_agent_status(self, url: str, status: AgentStatus):
         agent = await self.get_agent(url)
@@ -473,7 +493,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -510,7 +530,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def refresh_access_token(refresh_token: str = Cookie(None)):
     if not refresh_token or refresh_token not in active_refresh_tokens:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -522,7 +542,7 @@ async def refresh_access_token(refresh_token: str = Cookie(None)):
         # Remove expired token
         active_refresh_tokens.pop(refresh_token, None)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -532,7 +552,7 @@ async def refresh_access_token(refresh_token: str = Cookie(None)):
     user = get_user(username)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -706,49 +726,117 @@ async def stream_init(
         current_user: User = Depends(get_agent_or_admin_user)
 ):
     """Initialize or update agent metadata after connection"""
-    body = await request.json()
-    agent_url = body.get("url")
+    try:
+        body = await request.json()
+        agent_url = body.get("url")
 
-    agent = await request.app.state.store.get_agent(agent_url)
-    if not agent:
-        raise HTTPException(404, detail="Agent not registered via /connect/stream")
+        logger.info(f"Stream init request received for {agent_url}")
+        logger.info(f"Request body: {body}")
 
-    # Verify ownership
-    if agent.owner and agent.owner != current_user.username and current_user.role != "admin":
-        raise HTTPException(403, detail="You do not have permission to update this agent")
+        agent = await request.app.state.store.get_agent(agent_url)
+        if not agent:
+            raise HTTPException(404, detail="Agent not registered via /connect/stream")
 
-    # Parse capability-specific fields
-    if "mcp_capabilities" in body:
-        body["mcp_capabilities"] = MCPCapabilities(**body["mcp_capabilities"])
+        # Verify ownership
+        if agent.owner and agent.owner != current_user.username and current_user.role != "admin":
+            raise HTTPException(403, detail="You do not have permission to update this agent")
 
-    if "a2a_capabilities" in body:
-        body["a2a_capabilities"] = A2ACapabilities(**body["a2a_capabilities"])
+        # FIX: Better handling of payload validation
+        # Create a new agent dict from the existing agent
+        agent_dict = agent.model_dump()
 
-    # Process MCP tools
-    if "mcp_tools" in body and isinstance(body["mcp_tools"], list):
-        body["mcp_tools"] = [MCPTool(**tool) for tool in body["mcp_tools"]]
+        # Update fields with provided values
+        update_fields = [
+            "description", "tags", "category"
+        ]
+        for field in update_fields:
+            if field in body:
+                agent_dict[field] = body[field]
 
-    # Process A2A skills
-    if "a2a_skills" in body and isinstance(body["a2a_skills"], list):
-        body["a2a_skills"] = [A2ASkill(**skill) for skill in body["a2a_skills"]]
+        # Carefully handle capability-specific fields
+        # MCP Capabilities
+        if "mcp_capabilities" in body:
+            try:
+                mcp_caps = MCPCapabilities(**body["mcp_capabilities"])
+                agent_dict["mcp_capabilities"] = mcp_caps.model_dump(exclude_none=True)
+            except Exception as e:
+                logger.error(f"Failed to parse mcp_capabilities: {e}")
 
-    # Update fields
-    updated_fields = [
-        "mcp_capabilities", "a2a_capabilities", "mcp_tools", "a2a_skills",
-        "shared_resources", "tags", "category", "description"
-    ]
+        # A2A Capabilities
+        if "a2a_capabilities" in body:
+            try:
+                a2a_caps = A2ACapabilities(**body["a2a_capabilities"])
+                agent_dict["a2a_capabilities"] = a2a_caps.model_dump(exclude_none=True)
+            except Exception as e:
+                logger.error(f"Failed to parse a2a_capabilities: {e}")
 
-    agent_dict = agent.dict()
-    for field in updated_fields:
-        if field in body:
-            agent_dict[field] = body[field]
+        # FIX: Handle tools and skills with better validation and preserving existing data
+        # Process MCP tools
+        if "mcp_tools" in body and isinstance(body["mcp_tools"], list) and body["mcp_tools"]:
+            try:
+                # Validate each tool against the model
+                mcp_tools = []
+                for tool_data in body["mcp_tools"]:
+                    tool = MCPTool(**tool_data)
+                    mcp_tools.append(tool)
 
-    # Create updated agent record
-    new_agent = AgentRegistration(**agent_dict)
-    await request.app.state.store.save_agent(new_agent)
-    logger.info(f"✅ Updated agent fields for {agent_url}: {list(body.keys())}")
+                agent_dict["mcp_tools"] = [t.model_dump(exclude_none=True) for t in mcp_tools]
+                logger.info(f"Successfully processed {len(mcp_tools)} MCP tools")
+            except Exception as e:
+                logger.error(f"Failed to process MCP tools: {e}")
+                # Keep existing tools if processing fails
+                pass
 
-    return {"status": "updated"}
+        # Process A2A skills
+        if "a2a_skills" in body and isinstance(body["a2a_skills"], list) and body["a2a_skills"]:
+            try:
+                # Validate each skill against the model
+                a2a_skills = []
+                for skill_data in body["a2a_skills"]:
+                    skill = A2ASkill(**skill_data)
+                    a2a_skills.append(skill)
+
+                agent_dict["a2a_skills"] = [s.model_dump(exclude_none=True) for s in a2a_skills]
+                logger.info(f"Successfully processed {len(a2a_skills)} A2A skills")
+            except Exception as e:
+                logger.error(f"Failed to process A2A skills: {e}")
+                # Keep existing skills if processing fails
+                pass
+
+        # Process shared resources
+        if "shared_resources" in body and isinstance(body["shared_resources"], list):
+            try:
+                resources = []
+                for resource_data in body["shared_resources"]:
+                    resource = Resource(**resource_data)
+                    resources.append(resource)
+
+                agent_dict["shared_resources"] = [r.model_dump(exclude_none=True) for r in resources]
+            except Exception as e:
+                logger.error(f"Failed to process shared resources: {e}")
+                # Keep existing resources if processing fails
+                pass
+
+        # Create updated agent record
+        try:
+            new_agent = AgentRegistration(**agent_dict)
+            await request.app.state.store.save_agent(new_agent)
+            logger.info(f"✅ Updated agent {agent_url} with fields: {list(body.keys())}")
+            logger.info(f"  - MCP Tools: {len(new_agent.mcp_tools)}")
+            logger.info(f"  - A2A Skills: {len(new_agent.a2a_skills)}")
+
+            return {"status": "updated", "details": {
+                "mcp_tools_count": len(new_agent.mcp_tools),
+                "a2a_skills_count": len(new_agent.a2a_skills)
+            }}
+        except Exception as e:
+            logger.error(f"Failed to update agent: {e}")
+            raise HTTPException(500, detail=f"Failed to update agent: {str(e)}")
+
+    except Exception as e:
+        logger.error(f"Error in stream_init: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(500, detail=f"Server error: {str(e)}")
 
 
 @app.get("/connect/stream")
@@ -767,7 +855,7 @@ async def connect_stream(
         if cap not in valid_caps:
             raise HTTPException(400, detail=f"Invalid capability: {cap}")
 
-    # Initialize agent registration
+    # Initialize agent registration with proper empty lists
     ag = AgentRegistration(
         url=agent_url,
         name=name,
@@ -779,6 +867,9 @@ async def connect_stream(
         status=AgentStatus.ONLINE,
         owner=current_user.username
     )
+
+    # Log the agent creation with details
+    logger.info(f"Creating new agent: {name} at {agent_url} with capabilities {caps}")
 
     await app.state.store.save_agent(ag)
     session_id = await app.state.store.create_session(agent_url)
@@ -812,8 +903,7 @@ async def connect_stream(
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
             # Update agent status when connection is closed
-            ag.status = AgentStatus.OFFLINE
-            await app.state.store.save_agent(ag)
+            await app.state.store.update_agent_status(agent_url, AgentStatus.OFFLINE)
             logger.info(f"Agent {ag.name} disconnected")
 
     return EventSourceResponse(event_generator())
@@ -835,19 +925,61 @@ async def status(current_user: User = Depends(get_current_active_user)):
 
     for ag in visible_agents:
         heartbeat = round(now - ag.last_seen, 1)
-        result.append({
-            "name": ag.name,
-            "url": ag.url,
-            "status": ag.status,
-            "source": "sse" if "streamed" in ag.tags else "manual",
-            "aira_capabilities": ag.aira_capabilities,
-            "heartbeat_seconds_ago": heartbeat,
-            "tags": ag.tags,
-            "mcp_tools": [tool.dict() for tool in ag.mcp_tools] if ag.mcp_tools else [],
-            "a2a_skills": [skill.dict() for skill in ag.a2a_skills] if ag.a2a_skills else [],
-            "shared_resources": [r.dict() for r in ag.shared_resources],
-            "owner": ag.owner
-        })
+
+        # FIX: Properly handle serialization of tools and skills
+        try:
+            # Convert tools and skills to dict safely
+            mcp_tools_data = []
+            for tool in ag.mcp_tools:
+                # Handle both model instances and dicts
+                if hasattr(tool, "model_dump"):
+                    mcp_tools_data.append(tool.model_dump())
+                elif isinstance(tool, dict):
+                    mcp_tools_data.append(tool)
+
+            a2a_skills_data = []
+            for skill in ag.a2a_skills:
+                # Handle both model instances and dicts
+                if hasattr(skill, "model_dump"):
+                    a2a_skills_data.append(skill.model_dump())
+                elif isinstance(skill, dict):
+                    a2a_skills_data.append(skill)
+
+            # Log tools and skills for debugging
+            logger.info(f"Agent {ag.name} has {len(mcp_tools_data)} MCP tools and {len(a2a_skills_data)} A2A skills")
+
+            # Handle resources similarly
+            resources_data = []
+            for resource in ag.shared_resources:
+                if hasattr(resource, "model_dump"):
+                    resources_data.append(resource.model_dump())
+                elif isinstance(resource, dict):
+                    resources_data.append(resource)
+
+            result.append({
+                "name": ag.name,
+                "url": ag.url,
+                "status": ag.status,
+                "source": "sse" if "streamed" in ag.tags else "manual",
+                "aira_capabilities": ag.aira_capabilities,
+                "heartbeat_seconds_ago": heartbeat,
+                "tags": ag.tags,
+                "mcp_tools": mcp_tools_data,
+                "a2a_skills": a2a_skills_data,
+                "shared_resources": resources_data,
+                "owner": ag.owner
+            })
+        except Exception as e:
+            logger.error(f"Error serializing agent {ag.name}: {e}")
+            # Include a basic version of the agent without problematic fields
+            result.append({
+                "name": ag.name,
+                "url": ag.url,
+                "status": ag.status,
+                "error": f"Error serializing agent data: {str(e)}",
+                "aira_capabilities": ag.aira_capabilities,
+                "owner": ag.owner
+            })
 
     active_count = sum(1 for a in visible_agents if a.status == AgentStatus.ONLINE)
     return {
@@ -892,13 +1024,32 @@ async def list_mcp_tools(current_user: User = Depends(get_current_active_user)):
     all_tools = []
     for agent in mcp_agents:
         if agent.status == AgentStatus.ONLINE and agent.mcp_tools:
+            # Log tools for debugging
+            logger.info(f"Agent {agent.name} has {len(agent.mcp_tools)} MCP tools")
+
             for tool in agent.mcp_tools:
-                all_tools.append({
-                    "agent_name": agent.name,
-                    "agent_url": agent.url,
-                    "tool": tool.dict(),
-                    "owner": agent.owner
-                })
+                try:
+                    # Handle both model instances and dicts
+                    tool_data = {}
+                    if hasattr(tool, "model_dump"):
+                        tool_data = tool.model_dump()
+                    elif isinstance(tool, dict):
+                        tool_data = tool
+                    else:
+                        logger.warning(f"Unknown tool type: {type(tool)}")
+                        continue
+
+                    all_tools.append({
+                        "agent_name": agent.name,
+                        "agent_url": agent.url,
+                        "tool": tool_data,
+                        "owner": agent.owner
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing tool from agent {agent.name}: {e}")
+
+    # Log the total number of tools found
+    logger.info(f"Found {len(all_tools)} MCP tools across all agents")
 
     return {
         "total": len(all_tools),
@@ -922,13 +1073,32 @@ async def list_a2a_skills(current_user: User = Depends(get_current_active_user))
     all_skills = []
     for agent in a2a_agents:
         if agent.status == AgentStatus.ONLINE and agent.a2a_skills:
+            # Log skills for debugging
+            logger.info(f"Agent {agent.name} has {len(agent.a2a_skills)} A2A skills")
+
             for skill in agent.a2a_skills:
-                all_skills.append({
-                    "agent_name": agent.name,
-                    "agent_url": agent.url,
-                    "skill": skill.dict(),
-                    "owner": agent.owner
-                })
+                try:
+                    # Handle both model instances and dicts
+                    skill_data = {}
+                    if hasattr(skill, "model_dump"):
+                        skill_data = skill.model_dump()
+                    elif isinstance(skill, dict):
+                        skill_data = skill
+                    else:
+                        logger.warning(f"Unknown skill type: {type(skill)}")
+                        continue
+
+                    all_skills.append({
+                        "agent_name": agent.name,
+                        "agent_url": agent.url,
+                        "skill": skill_data,
+                        "owner": agent.owner
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing skill from agent {agent.name}: {e}")
+
+    # Log the total number of skills found
+    logger.info(f"Found {len(all_skills)} A2A skills across all agents")
 
     return {
         "total": len(all_skills),
@@ -1331,6 +1501,7 @@ async def startup_event():
     # Start heartbeat checker
     asyncio.create_task(check_agent_heartbeats())
     logger.info("AIRA Hub started with OAuth 2.1 Authentication")
+    logger.info("Added fixes for proper MCP tools and A2A skills handling")
 
 
 @app.get("/a2a/agents")
@@ -1355,14 +1526,38 @@ async def list_a2a(current_user: User = Depends(get_current_active_user)):
 # Main Entrypoint
 # =====================================================================
 
-if __name__ == "__main__":
+def main():
     import argparse
     import uvicorn
+    import traceback
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8015)
     parser.add_argument("--reload", action="store_true")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode with extra logging")
     cfg = parser.parse_args()
 
-    uvicorn.run("AiraHub:app", host=cfg.host, port=cfg.port, reload=cfg.reload)
+    # Set logging level based on debug flag
+    if cfg.debug:
+        logging.basicConfig(level=logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled with extra logging")
+
+    logger.info(f"Starting AIRA Hub on {cfg.host}:{cfg.port}")
+
+    try:
+        uvicorn.run("AiraHub:app", host=cfg.host, port=cfg.port, reload=cfg.reload)
+    except Exception as e:
+        logger.error(f"Error starting AIRA Hub: {e}")
+        logger.error(traceback.format_exc())
+
+
+if __name__ == "__main__":
+    import traceback
+
+    try:
+        main()
+    except Exception as e:
+        logger.error(f"Fatal error in main: {e}")
+        logger.error(traceback.format_exc())
