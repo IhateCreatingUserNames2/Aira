@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "aira-connector": {
+      "command": python,
+      "args": [
+        "C:\\FOLDER\\aira_Claude.py"
+      ],
+      "env": {
+        "AIRA_HUB_URL": "http://localhost:8015",
+        "AIRA_USERNAME": "admin",
+        "AIRA_PASSWORD": "password123"
+      }
+    }
+  }
+}
