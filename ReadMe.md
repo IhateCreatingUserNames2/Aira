@@ -1,5 +1,29 @@
 # AIRA Hub - Tool and Agent Management Platform
 
+
+
+AIRA HUB HAS A NEW VERSION THAT WORKS ON CLAUDE OR OTHER MCP CLIENTS THAT USE JSON OR MCP REMOTE. 
+
+https://github.com/IhateCreatingUserNames2/AiraHub2/tree/main
+
+Test demo on: 
+https://airahub2.onrender.com/
+
+CLAUDE JSON CONFIG: 
+```
+{ 
+  "mcpServers": { 
+    "aira-hub": { 
+      "command": "npx", 
+      "args": [ 
+        "mcp-remote",
+        "https://airahub2.onrender.com/mcp/stream"
+      ]
+    }
+  } 
+}
+```
+
 ## Overview
 AIRA Hub is a FastAPI-based platform for managing MCP (Model Context Protocol) tools and A2A (Agent-to-Agent) skills with OAuth 2.1 authentication. This document provides setup instructions, usage examples, and API reference for the system.
 
