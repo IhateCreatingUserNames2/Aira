@@ -4,7 +4,7 @@
 
 AIRA HUB HAS A NEW VERSION THAT WORKS ON CLAUDE OR OTHER MCP CLIENTS THAT USE JSON OR MCP REMOTE. 
 
-https://github.com/IhateCreatingUserNames2/AiraHub2/tree/main
+--->     NEW VERSION https://github.com/IhateCreatingUserNames2/AiraHub2/tree/main
 
 Test demo on: 
 https://airahub2.onrender.com/
